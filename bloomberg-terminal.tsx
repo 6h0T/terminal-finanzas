@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   ChevronDown,
   X,
@@ -13,15 +13,53 @@ import {
   ChevronRight,
   Sun,
   Moon,
+  RefreshCw,
+  TrendingUp,
+  DollarSign,
 } from "lucide-react"
 import { Sparkline } from "./sparkline"
-import { marketData } from "./marketData"
+import useSWR from "swr"
 
 const fixedColumnClass = "w-[120px] sm:w-[140px] whitespace-nowrap overflow-hidden text-ellipsis"
 
+interface CedearData {
+  id: string
+  name: string
+  ticker: string
+  num: string
+  ratio: number
+  precioUSD: number
+  precioARS: number
+  value: number
+  change: number
+  pctChange: number
+  avat: number
+  time: string
+  ytd: number
+  ytdCur: number
+  subyacenteUSD: number
+}
+
+interface ApiResponse {
+  cedears: CedearData[]
+  dolarCCL: number
+  lastUpdate: string
+}
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
 export default function BloombergTerminal() {
-  const [data, setData] = useState(marketData)
   const [isDarkMode, setIsDarkMode] = useState(true)
+  const [selectedCategory, setSelectedCategory] = useState<"tech" | "finance" | "consumer" | "all">("all")
+  
+  const { data, error, isLoading, mutate } = useSWR<ApiResponse>(
+    "/api/cedears",
+    fetcher,
+    {
+      refreshInterval: 30000, // Actualizar cada 30 segundos
+      revalidateOnFocus: true,
+    }
+  )
 
   useEffect(() => {
     document.body.classList.toggle("dark", isDarkMode)
@@ -32,7 +70,26 @@ export default function BloombergTerminal() {
     setIsDarkMode(!isDarkMode)
   }
 
-  const renderSection = (title: string, items: any[], sectionNum: string, isDarkMode: boolean) => (
+  const handleRefresh = useCallback(() => {
+    mutate()
+  }, [mutate])
+
+  const categorizeData = (cedears: CedearData[]) => {
+    const tech = ["AAPL", "MSFT", "GOOGL", "META", "NVDA", "AMD", "INTC", "NFLX", "TSLA"]
+    const finance = ["JPM", "V"]
+    const consumer = ["KO", "DIS", "MCD", "NKE", "WMT", "PG", "AMZN"]
+    
+    if (selectedCategory === "all") return cedears
+    
+    return cedears.filter((c) => {
+      if (selectedCategory === "tech") return tech.includes(c.id)
+      if (selectedCategory === "finance") return finance.includes(c.id)
+      if (selectedCategory === "consumer") return consumer.includes(c.id)
+      return true
+    })
+  }
+
+  const renderSection = (title: string, items: CedearData[], sectionNum: string, isDarkMode: boolean) => (
     <>
       <tr className={`${isDarkMode ? "text-white bg-[#1d3969]" : "text-[#1d3969] bg-[#e2e8f0]"}`}>
         <th
@@ -40,17 +97,22 @@ export default function BloombergTerminal() {
         >
           {sectionNum} {title}
         </th>
-        <th colSpan={9}></th>
+        <th colSpan={10}></th>
       </tr>
-      {items.map((item, index) => (
+      {items.map((item) => (
         <tr key={item.id} className={`border-b ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"} hover:bg-[#2563eb]/10 transition-colors`}>
           <td className={`sticky left-0 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f8fafc]"} px-2 py-1.5 ${fixedColumnClass}`}>
             <div className="flex items-center gap-2">
               <span className={`${isDarkMode ? "text-[#64748b]" : "text-[#64748b]"} text-xs`}>{item.num}</span>
-              <span className="text-[#2563eb] font-medium text-xs">{item.id}</span>
+              <div className="flex flex-col">
+                <span className="text-[#2563eb] font-medium text-xs">{item.id}</span>
+                <span className={`text-[10px] ${isDarkMode ? "text-[#64748b]" : "text-[#94a3b8]"}`}>{item.name}</span>
+              </div>
             </div>
           </td>
-          <td className={`px-2 py-1.5 text-center ${isDarkMode ? "text-[#64748b]" : "text-[#64748b]"} text-xs`}>[□]</td>
+          <td className={`px-2 py-1.5 text-center ${isDarkMode ? "text-[#64748b]" : "text-[#64748b]"} text-xs`}>
+            1:{item.ratio}
+          </td>
           <td className={`px-2 py-1.5 w-[100px] ${isDarkMode ? "bg-[#1d3969]/50" : "bg-[#e2e8f0]"}`}>
             <div className="flex justify-center">
               <Sparkline
@@ -64,11 +126,14 @@ export default function BloombergTerminal() {
             </div>
           </td>
           <td className={`px-2 py-1.5 text-right ${isDarkMode ? "text-white" : "text-[#374151]"} font-medium text-xs`}>
-            {item.value.toFixed(2)}
+            ${item.value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </td>
+          <td className={`px-2 py-1.5 text-right ${isDarkMode ? "text-[#94a3b8]" : "text-[#64748b]"} text-xs hidden lg:table-cell`}>
+            US${item.subyacenteUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </td>
           <td className={`px-2 py-1.5 text-right text-xs font-medium ${item.change > 0 ? "text-[#059669]" : "text-[#dc2626]"}`}>
             {item.change > 0 ? "+" : ""}
-            {item.change.toFixed(2)}
+            ${item.change.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </td>
           <td className={`px-2 py-1.5 text-right text-xs font-medium ${item.pctChange > 0 ? "text-[#059669]" : "text-[#dc2626]"}`}>
             {item.pctChange > 0 ? "+" : ""}
@@ -99,6 +164,19 @@ export default function BloombergTerminal() {
     </>
   )
 
+  const filteredCedears = data?.cedears ? categorizeData(data.cedears) : []
+  
+  // Dividir CEDEARs en categorías para mostrar
+  const techCedears = filteredCedears.filter((c) => 
+    ["AAPL", "MSFT", "GOOGL", "META", "NVDA", "AMD", "INTC", "NFLX", "TSLA"].includes(c.id)
+  )
+  const financeCedears = filteredCedears.filter((c) => 
+    ["JPM", "V", "AMZN"].includes(c.id)
+  )
+  const consumerCedears = filteredCedears.filter((c) => 
+    ["KO", "DIS", "MCD", "NKE", "WMT", "PG", "BA", "PFE"].includes(c.id)
+  )
+
   return (
     <div className={`min-h-screen font-sans ${isDarkMode ? "bg-[#0f172a] text-white" : "bg-[#f8fafc] text-[#374151]"}`}>
       {/* Encabezado */}
@@ -106,13 +184,30 @@ export default function BloombergTerminal() {
         className={`${isDarkMode ? "bg-[#1d3969] text-white" : "bg-[#e2e8f0] text-[#1d3969]"} px-3 py-2 flex items-center justify-between border-b ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"}`}
       >
         <div className="flex items-center gap-4">
-          <span className="text-[#2563eb] font-semibold text-xs sm:text-sm">4-COTIZACIONES</span>
-          <span className={`${isDarkMode ? "text-[#94a3b8]" : "text-[#64748b]"} text-xs sm:text-sm`}>2-MERCADOS</span>
+          <span className="text-[#2563eb] font-semibold text-xs sm:text-sm flex items-center gap-1">
+            <TrendingUp className="h-4 w-4" />
+            CEDEARS
+          </span>
+          <span className={`${isDarkMode ? "text-[#94a3b8]" : "text-[#64748b]"} text-xs sm:text-sm`}>Panel de Cotizaciones</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="bg-gradient-to-r from-[#1d3969] to-[#2563eb] px-3 py-1 text-white rounded-lg text-xs sm:text-sm font-medium hidden sm:inline-block shadow-md">Pestañas aquí</span>
-          <span className={`${isDarkMode ? "text-[#94a3b8]" : "text-[#64748b]"} text-xs sm:text-sm`}>= Opciones</span>
+          {data?.dolarCCL && (
+            <span className="bg-gradient-to-r from-[#1d3969] to-[#2563eb] px-3 py-1 text-white rounded-lg text-xs sm:text-sm font-medium hidden sm:flex items-center gap-1 shadow-md">
+              <DollarSign className="h-3 w-3" />
+              CCL: ${data.dolarCCL.toLocaleString("es-AR")}
+            </span>
+          )}
+          <span className={`${isDarkMode ? "text-[#94a3b8]" : "text-[#64748b]"} text-xs sm:text-sm hidden md:inline`}>
+            {data?.lastUpdate ? new Date(data.lastUpdate).toLocaleTimeString("es-AR") : ""}
+          </span>
           <div className="flex gap-1.5">
+            <button 
+              onClick={handleRefresh}
+              className={`p-1 hover:bg-[#2563eb]/20 rounded transition-colors ${isLoading ? "animate-spin" : ""}`}
+              disabled={isLoading}
+            >
+              <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
+            </button>
             <button className="p-1 hover:bg-[#2563eb]/20 rounded transition-colors">
               <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
             </button>
@@ -136,13 +231,52 @@ export default function BloombergTerminal() {
       <div
         className={`flex flex-wrap gap-2 ${isDarkMode ? "bg-[#1d3969]/80" : "bg-[#e2e8f0]"} px-3 py-2 text-xs sm:text-sm`}
       >
-        <button className="bg-[#dc2626] px-3 py-1.5 text-white rounded-lg font-medium hover:bg-[#b91c1c] transition-colors shadow-md hover:shadow-lg">CANCELAR</button>
-        <button className="bg-gradient-to-r from-[#059669] to-[#10b981] px-3 py-1.5 text-white rounded-lg font-medium hover:shadow-lg transition-all shadow-md">NUEVO</button>
-        <button className="bg-gradient-to-r from-[#059669] to-[#10b981] px-3 py-1.5 text-white rounded-lg font-medium hover:shadow-lg transition-all shadow-md">BLANCO</button>
-        <button className="bg-gradient-to-r from-[#059669] to-[#10b981] px-3 py-1.5 text-white rounded-lg font-medium hover:shadow-lg transition-all shadow-md">NOTICIAS</button>
-        <button className="bg-gradient-to-r from-[#059669] to-[#10b981] px-3 py-1.5 text-white rounded-lg font-medium hover:shadow-lg transition-all shadow-md">GMOV</button>
-        <button className="bg-gradient-to-r from-[#059669] to-[#10b981] px-3 py-1.5 text-white rounded-lg font-medium hover:shadow-lg transition-all shadow-md">GVOL</button>
-        <button className="bg-gradient-to-r from-[#059669] to-[#10b981] px-3 py-1.5 text-white rounded-lg font-medium hover:shadow-lg transition-all shadow-md">RATC</button>
+        <button 
+          onClick={handleRefresh}
+          className="bg-gradient-to-r from-[#059669] to-[#10b981] px-3 py-1.5 text-white rounded-lg font-medium hover:shadow-lg transition-all shadow-md"
+        >
+          ACTUALIZAR
+        </button>
+        <button 
+          onClick={() => setSelectedCategory("all")}
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all shadow-md ${
+            selectedCategory === "all" 
+              ? "bg-gradient-to-r from-[#1d3969] to-[#2563eb] text-white" 
+              : isDarkMode ? "bg-[#374151] text-white hover:bg-[#4b5563]" : "bg-white text-[#374151] hover:bg-gray-100"
+          }`}
+        >
+          TODOS
+        </button>
+        <button 
+          onClick={() => setSelectedCategory("tech")}
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all shadow-md ${
+            selectedCategory === "tech" 
+              ? "bg-gradient-to-r from-[#1d3969] to-[#2563eb] text-white" 
+              : isDarkMode ? "bg-[#374151] text-white hover:bg-[#4b5563]" : "bg-white text-[#374151] hover:bg-gray-100"
+          }`}
+        >
+          TECNOLOGIA
+        </button>
+        <button 
+          onClick={() => setSelectedCategory("finance")}
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all shadow-md ${
+            selectedCategory === "finance" 
+              ? "bg-gradient-to-r from-[#1d3969] to-[#2563eb] text-white" 
+              : isDarkMode ? "bg-[#374151] text-white hover:bg-[#4b5563]" : "bg-white text-[#374151] hover:bg-gray-100"
+          }`}
+        >
+          FINANZAS
+        </button>
+        <button 
+          onClick={() => setSelectedCategory("consumer")}
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all shadow-md ${
+            selectedCategory === "consumer" 
+              ? "bg-gradient-to-r from-[#1d3969] to-[#2563eb] text-white" 
+              : isDarkMode ? "bg-[#374151] text-white hover:bg-[#4b5563]" : "bg-white text-[#374151] hover:bg-gray-100"
+          }`}
+        >
+          CONSUMO
+        </button>
       </div>
 
       {/* Barra de Navegación */}
@@ -151,13 +285,12 @@ export default function BloombergTerminal() {
       >
         <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-[#2563eb]" />
         <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-[#2563eb]" />
-        <span className="font-medium">Sin Valor Cargado</span>
+        <span className="font-medium">CEDEARs Argentina</span>
         <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
         <span className={isDarkMode ? "text-[#64748b]" : "text-[#64748b]"}>|</span>
-        <span>WEI</span>
+        <span>Yahoo Finance</span>
         <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
-        <span className="hidden sm:inline">Menú de Funciones Relacionadas</span>
-        <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+        <span className="hidden sm:inline">Cotizaciones en Tiempo Real</span>
         <div className="ml-auto flex items-center gap-3">
           <button className="flex items-center gap-1 hover:text-[#2563eb] transition-colors">
             <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -180,70 +313,94 @@ export default function BloombergTerminal() {
         className={`flex flex-wrap items-center gap-3 ${isDarkMode ? "bg-[#1d3969]/40" : "bg-[#f1f5f9]"} px-3 py-2 text-[#2563eb] text-xs sm:text-sm`}
       >
         <div className="flex items-center gap-2">
-          <span className="font-bold">Estándar</span>
-          <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
-        </div>
-        <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1d3969] transition-colors">
-          <input type="checkbox" className="h-3.5 w-3.5 accent-[#2563eb] rounded" />
-          <span>Movimientos</span>
-        </label>
-        <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1d3969] transition-colors">
-          <input type="checkbox" className="h-3.5 w-3.5 accent-[#2563eb] rounded" />
-          <span>Volatilidad</span>
-        </label>
-        <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1d3969] transition-colors">
-          <input type="checkbox" className="h-3.5 w-3.5 accent-[#2563eb] rounded" />
-          <span>Ratios</span>
-        </label>
-        <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1d3969] transition-colors">
-          <input type="checkbox" className="h-3.5 w-3.5 accent-[#2563eb] rounded" />
-          <span>Futuros</span>
-        </label>
-        <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1d3969] transition-colors">
-          <input type="checkbox" className="h-3.5 w-3.5 accent-[#2563eb] rounded" defaultChecked />
-          <span>Δ AVAT</span>
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="bg-gradient-to-r from-[#1d3969] to-[#2563eb] px-2.5 py-1 text-white rounded-lg font-medium text-xs">10D</span>
-          <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="bg-gradient-to-r from-[#1d3969] to-[#2563eb] px-2.5 py-1 text-white rounded-lg font-medium text-xs">%Var YTD</span>
+          <span className="font-bold">Moneda</span>
           <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-gradient-to-r from-[#1d3969] to-[#2563eb] px-2.5 py-1 text-white rounded-lg font-medium text-xs">ARS</span>
-          <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
         </div>
+        <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1d3969] transition-colors">
+          <input type="checkbox" className="h-3.5 w-3.5 accent-[#2563eb] rounded" defaultChecked />
+          <span>Mostrar Subyacente USD</span>
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1d3969] transition-colors">
+          <input type="checkbox" className="h-3.5 w-3.5 accent-[#2563eb] rounded" defaultChecked />
+          <span>Ratios</span>
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1d3969] transition-colors">
+          <input type="checkbox" className="h-3.5 w-3.5 accent-[#2563eb] rounded" defaultChecked />
+          <span>Variacion %</span>
+        </label>
       </div>
 
+      {/* Estado de carga o error */}
+      {isLoading && !data && (
+        <div className={`flex items-center justify-center py-20 ${isDarkMode ? "text-white" : "text-[#374151]"}`}>
+          <RefreshCw className="h-8 w-8 animate-spin mr-3" />
+          <span>Cargando cotizaciones...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center justify-center py-20 text-[#dc2626]">
+          <span>Error al cargar las cotizaciones. </span>
+          <button onClick={handleRefresh} className="ml-2 underline hover:text-[#b91c1c]">
+            Reintentar
+          </button>
+        </div>
+      )}
+
       {/* Contenido Principal */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-separate border-spacing-0">
-          <thead>
-            <tr className={`${isDarkMode ? "text-white bg-[#1d3969]" : "text-[#1d3969] bg-[#e2e8f0]"}`}>
-              <th
-                className={`sticky left-0 ${isDarkMode ? "bg-[#1d3969]" : "bg-[#e2e8f0]"} px-2 py-2 text-left font-semibold ${fixedColumnClass}`}
-              >
-                Mercado
-              </th>
-              <th className="px-2 py-2 text-center font-semibold">RMI</th>
-              <th className={`px-2 py-2 text-center font-semibold ${isDarkMode ? "bg-[#1d3969]" : "bg-[#e2e8f0]"}`}>2 Días</th>
-              <th className="px-2 py-2 text-right font-semibold">Valor</th>
-              <th className="px-2 py-2 text-right font-semibold">Var. Neta</th>
-              <th className="px-2 py-2 text-right font-semibold">%Var.</th>
-              <th className="px-2 py-2 text-right font-semibold hidden sm:table-cell">Δ AVAT</th>
-              <th className="px-2 py-2 text-right font-semibold hidden sm:table-cell">Hora</th>
-              <th className="px-2 py-2 text-right font-semibold hidden md:table-cell">%Ytd</th>
-              <th className="px-2 py-2 text-right font-semibold hidden md:table-cell">%YtdMon</th>
-            </tr>
-          </thead>
-          <tbody>
-            {renderSection("Américas", data.americas, "1)", isDarkMode)}
-            {renderSection("EMEA", data.emea, "2)", isDarkMode)}
-            {renderSection("Asia/Pacífico", data.asiaPacific, "3)", isDarkMode)}
-          </tbody>
-        </table>
+      {data?.cedears && (
+        <div className="overflow-x-auto">
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr className={`${isDarkMode ? "text-white bg-[#1d3969]" : "text-[#1d3969] bg-[#e2e8f0]"}`}>
+                <th
+                  className={`sticky left-0 ${isDarkMode ? "bg-[#1d3969]" : "bg-[#e2e8f0]"} px-2 py-2 text-left font-semibold ${fixedColumnClass}`}
+                >
+                  CEDEAR
+                </th>
+                <th className="px-2 py-2 text-center font-semibold">Ratio</th>
+                <th className={`px-2 py-2 text-center font-semibold ${isDarkMode ? "bg-[#1d3969]" : "bg-[#e2e8f0]"}`}>Grafico</th>
+                <th className="px-2 py-2 text-right font-semibold">Precio ARS</th>
+                <th className="px-2 py-2 text-right font-semibold hidden lg:table-cell">Subyacente USD</th>
+                <th className="px-2 py-2 text-right font-semibold">Var. Neta</th>
+                <th className="px-2 py-2 text-right font-semibold">%Var.</th>
+                <th className="px-2 py-2 text-right font-semibold hidden sm:table-cell">AVAT</th>
+                <th className="px-2 py-2 text-right font-semibold hidden sm:table-cell">Hora</th>
+                <th className="px-2 py-2 text-right font-semibold hidden md:table-cell">%YTD</th>
+                <th className="px-2 py-2 text-right font-semibold hidden md:table-cell">%YTD Mon</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedCategory === "all" ? (
+                <>
+                  {techCedears.length > 0 && renderSection("Tecnologia", techCedears, "1)", isDarkMode)}
+                  {financeCedears.length > 0 && renderSection("Finanzas", financeCedears, "2)", isDarkMode)}
+                  {consumerCedears.length > 0 && renderSection("Consumo", consumerCedears, "3)", isDarkMode)}
+                </>
+              ) : (
+                renderSection(
+                  selectedCategory === "tech" ? "Tecnologia" : 
+                  selectedCategory === "finance" ? "Finanzas" : "Consumo",
+                  filteredCedears,
+                  "1)",
+                  isDarkMode
+                )
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Footer con información */}
+      <div className={`px-3 py-2 text-xs ${isDarkMode ? "bg-[#1d3969]/40 text-[#94a3b8]" : "bg-[#f1f5f9] text-[#64748b]"} border-t ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"}`}>
+        <div className="flex flex-wrap justify-between items-center gap-2">
+          <span>Fuente: Yahoo Finance | Dolar CCL: DolarAPI</span>
+          <span>Los precios de CEDEARs se calculan usando el ratio de conversion y el dolar CCL</span>
+          <span>Actualizacion automatica cada 30 segundos</span>
+        </div>
       </div>
     </div>
   )
