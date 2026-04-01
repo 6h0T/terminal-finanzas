@@ -125,24 +125,28 @@ const SECTOR_COLORS: Record<string, { bg: string; border: string; text: string }
   "OTROS": { bg: "#2d3748", border: "#4a5568", text: "#a0aec0" },
 }
 
-function getHeatColor(pctChange: number): { bg: string; gradient: string } {
+function getHeatColor(pctChange: number): string {
   const intensity = Math.min(Math.abs(pctChange) / 5, 1)
   
   if (pctChange > 0) {
-    if (intensity < 0.15) return { bg: "#166534", gradient: "linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%)" }
-    if (intensity < 0.3) return { bg: "#15803d", gradient: "linear-gradient(135deg, #16a34a 0%, #15803d 50%, #166534 100%)" }
-    if (intensity < 0.5) return { bg: "#166534", gradient: "linear-gradient(135deg, #15803d 0%, #166534 50%, #14532d 100%)" }
-    if (intensity < 0.7) return { bg: "#14532d", gradient: "linear-gradient(135deg, #166534 0%, #14532d 50%, #052e16 100%)" }
-    return { bg: "#052e16", gradient: "linear-gradient(135deg, #14532d 0%, #052e16 50%, #022c22 100%)" }
+    // Verde - de claro a oscuro segun intensidad
+    if (intensity < 0.1) return "#22c55e"  // Verde brillante
+    if (intensity < 0.2) return "#16a34a"  // Verde medio-claro
+    if (intensity < 0.35) return "#15803d" // Verde medio
+    if (intensity < 0.5) return "#166534"  // Verde oscuro
+    if (intensity < 0.7) return "#14532d"  // Verde muy oscuro
+    return "#052e16"                        // Verde casi negro
   } else if (pctChange < 0) {
-    if (intensity < 0.15) return { bg: "#991b1b", gradient: "linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)" }
-    if (intensity < 0.3) return { bg: "#b91c1c", gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)" }
-    if (intensity < 0.5) return { bg: "#991b1b", gradient: "linear-gradient(135deg, #b91c1c 0%, #991b1b 50%, #7f1d1d 100%)" }
-    if (intensity < 0.7) return { bg: "#7f1d1d", gradient: "linear-gradient(135deg, #991b1b 0%, #7f1d1d 50%, #450a0a 100%)" }
-    return { bg: "#450a0a", gradient: "linear-gradient(135deg, #7f1d1d 0%, #450a0a 50%, #1c0505 100%)" }
+    // Rojo - de claro a oscuro segun intensidad
+    if (intensity < 0.1) return "#ef4444"  // Rojo brillante
+    if (intensity < 0.2) return "#dc2626"  // Rojo medio-claro
+    if (intensity < 0.35) return "#b91c1c" // Rojo medio
+    if (intensity < 0.5) return "#991b1b"  // Rojo oscuro
+    if (intensity < 0.7) return "#7f1d1d"  // Rojo muy oscuro
+    return "#450a0a"                        // Rojo casi negro
   }
   
-  return { bg: "#374151", gradient: "linear-gradient(135deg, #4b5563 0%, #374151 50%, #1f2937 100%)" }
+  return "#4b5563" // Gris para sin cambio
 }
 
 // Algoritmo de treemap simplificado con mejor distribucion
@@ -394,23 +398,17 @@ export function CedearHeatmap({ data, isDarkMode }: CedearHeatmapProps) {
     <div className={`${isDarkMode ? "bg-[#0f0f0f]" : "bg-[#f8fafc]"} rounded-b-lg overflow-hidden`}>
       {/* Barra de escala */}
       <div className={`flex items-center justify-between px-4 py-2.5 border-b ${isDarkMode ? "border-[#1f2937] bg-[#111]" : "border-[#e2e8f0] bg-[#f1f5f9]"}`}>
-        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
           <span className={`text-xs font-medium ${isDarkMode ? "text-[#9ca3af]" : "text-[#6b7280]"}`}>Variacion %</span>
           <div className="flex items-center gap-1">
             <span className="text-xs font-bold text-red-400">-5%</span>
             <div className="flex h-5 rounded overflow-hidden shadow-inner">
               {[
-                "linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%)",
-                "linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%)",
-                "linear-gradient(135deg, #b91c1c 0%, #991b1b 100%)",
-                "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
-                "linear-gradient(135deg, #4b5563 0%, #374151 100%)",
-                "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-                "linear-gradient(135deg, #15803d 0%, #166534 100%)",
-                "linear-gradient(135deg, #166534 0%, #14532d 100%)",
-                "linear-gradient(135deg, #14532d 0%, #052e16 100%)",
-              ].map((grad, i) => (
-                <div key={i} className="w-6 h-full" style={{ background: grad }} />
+                "#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626",
+                "#4b5563",
+                "#22c55e", "#16a34a", "#15803d", "#166534", "#14532d",
+              ].map((color, i) => (
+                <div key={i} className="w-5 h-full" style={{ backgroundColor: color }} />
               ))}
             </div>
             <span className="text-xs font-bold text-green-400">+5%</span>
@@ -486,7 +484,7 @@ export function CedearHeatmap({ data, isDarkMode }: CedearHeatmapProps) {
                   
                   {/* Celdas del treemap */}
                   {sector.nodes.map((node, idx) => {
-                    const { gradient } = getHeatColor(node.pctChange)
+                    const cellColor = getHeatColor(node.pctChange)
                     const isHovered = hoveredItem?.label === node.label && hoveredItem?.item?.id === node.item?.id
                     const minDim = Math.min(node.width, node.height)
                     
@@ -503,21 +501,19 @@ export function CedearHeatmap({ data, isDarkMode }: CedearHeatmapProps) {
                         onMouseLeave={() => setHoveredItem(null)}
                         style={{ cursor: "pointer" }}
                       >
-                        {/* Celda con gradiente 3D */}
+                        {/* Celda con color 3D */}
                         <rect
                           x={node.x + 1}
                           y={node.y + 1}
                           width={Math.max(node.width - 2, 2)}
                           height={Math.max(node.height - 2, 2)}
-                          fill={gradient}
-                          stroke={isHovered ? "#fff" : "rgba(0,0,0,0.3)"}
-                          strokeWidth={isHovered ? "2" : "0.5"}
-                          rx="3"
+                          fill={cellColor}
+                          stroke={isHovered ? "#fff" : "rgba(0,0,0,0.4)"}
+                          strokeWidth={isHovered ? "2" : "1"}
+                          rx="2"
                           filter={isHovered ? "url(#cell-shadow-hover)" : "url(#cell-shadow)"}
                           style={{
                             transition: "all 0.15s ease-out",
-                            transform: isHovered ? "scale(1.02)" : "scale(1)",
-                            transformOrigin: `${node.x + node.width/2}px ${node.y + node.height/2}px`,
                           }}
                         />
                         
