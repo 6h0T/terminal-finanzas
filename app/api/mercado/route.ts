@@ -88,14 +88,14 @@ export async function GET(request: Request) {
   const category = searchParams.get("category") || "all"
 
   try {
-    // Fetch all data in parallel
+    // Always fetch all data for accurate counts
     const [cedears, acciones, bonos, letras, obligaciones, opciones, dolarData] = await Promise.all([
-      category === "all" || category === "cedears" ? fetchMarketData(API_ENDPOINTS.cedears) : Promise.resolve([]),
-      category === "all" || category === "acciones" ? fetchMarketData(API_ENDPOINTS.acciones) : Promise.resolve([]),
-      category === "all" || category === "bonos" ? fetchMarketData(API_ENDPOINTS.bonos) : Promise.resolve([]),
-      category === "all" || category === "letras" ? fetchMarketData(API_ENDPOINTS.letras) : Promise.resolve([]),
-      category === "all" || category === "obligaciones" ? fetchMarketData(API_ENDPOINTS.obligaciones) : Promise.resolve([]),
-      category === "all" || category === "opciones" ? fetchMarketData(API_ENDPOINTS.opciones) : Promise.resolve([]),
+      fetchMarketData(API_ENDPOINTS.cedears),
+      fetchMarketData(API_ENDPOINTS.acciones),
+      fetchMarketData(API_ENDPOINTS.bonos),
+      fetchMarketData(API_ENDPOINTS.letras),
+      fetchMarketData(API_ENDPOINTS.obligaciones),
+      fetchMarketData(API_ENDPOINTS.opciones),
       fetchDolarData(),
     ])
 
