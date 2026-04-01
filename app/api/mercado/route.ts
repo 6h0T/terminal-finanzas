@@ -111,10 +111,12 @@ export async function GET(request: Request) {
     }
 
     // Save snapshots to database (fire-and-forget)
-    const timestamp = Date.now()
-    const date = new Date().toISOString().split("T")[0]
-    
-    setImmediate(() => {
+    // Temporarily disabled to isolate API issues
+    /*
+    try {
+      const timestamp = Date.now()
+      const date = new Date().toISOString().split("T")[0]
+      
       const allItems = [
         ...data.cedears,
         ...data.acciones,
@@ -135,7 +137,10 @@ export async function GET(request: Request) {
           })
         }
       }
-    })
+    } catch (snapshotError) {
+      console.error("Error saving snapshots:", snapshotError)
+    }
+    */
 
     // Extract dolar values
     const dolar = {

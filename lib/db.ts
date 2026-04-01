@@ -27,6 +27,11 @@ let lastSaveTime = 0
 const SAVE_INTERVAL = 30000
 
 function loadHistory(): HistoryData {
+  // Disabled in production (Vercel filesystem is read-only)
+  if (process.env.NODE_ENV === 'production') {
+    return {}
+  }
+  
   try {
     if (fs.existsSync(dataPath)) {
       const data = fs.readFileSync(dataPath, "utf-8")
@@ -39,6 +44,12 @@ function loadHistory(): HistoryData {
 }
 
 function saveHistory() {
+  // Disabled in production (Vercel filesystem is read-only)
+  // Data is kept in memory only
+  if (process.env.NODE_ENV === 'production') {
+    return
+  }
+  
   try {
     const now = Date.now()
     if (now - lastSaveTime < SAVE_INTERVAL) return
