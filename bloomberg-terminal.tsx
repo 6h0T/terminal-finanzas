@@ -95,10 +95,13 @@ const CATEGORIES: { id: CategoryType; label: string; icon: React.ReactNode }[] =
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
+type ViewType = "tabla" | "heatmap"
+
 export default function BloombergTerminal() {
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>("cedears")
   const [searchTerm, setSearchTerm] = useState("")
+  const [viewType, setViewType] = useState<ViewType>("tabla")
   
   const { data, error, isLoading, mutate } = useSWR<ApiResponse>(
     `/api/mercado?category=${selectedCategory === "all" ? "all" : selectedCategory}`,
@@ -322,9 +325,12 @@ export default function BloombergTerminal() {
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}
-            onClick={() => handleCategoryChange(cat.id)}
+            onClick={() => {
+              handleCategoryChange(cat.id)
+              setViewType("tabla")
+            }}
             className={`px-3 py-1.5 rounded-lg font-medium transition-all shadow-md flex items-center gap-1.5 ${
-              selectedCategory === cat.id
+              selectedCategory === cat.id && viewType === "tabla"
                 ? "bg-gradient-to-r from-[#1d3969] to-[#2563eb] text-white"
                 : isDarkMode
                 ? "bg-[#374151] text-white hover:bg-[#4b5563]"
@@ -347,6 +353,26 @@ export default function BloombergTerminal() {
             )}
           </button>
         ))}
+        
+        {/* Boton Mapa de Calor - solo visible cuando hay CEDEARs */}
+        {data?.data?.cedears && data.data.cedears.length > 0 && (
+          <button
+            onClick={() => {
+              setSelectedCategory("cedears")
+              setViewType("heatmap")
+            }}
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all shadow-md flex items-center gap-1.5 ${
+              viewType === "heatmap"
+                ? "bg-gradient-to-r from-[#dc2626] to-[#f97316] text-white"
+                : isDarkMode
+                ? "bg-[#374151] text-white hover:bg-[#4b5563]"
+                : "bg-white text-[#374151] hover:bg-gray-100"
+            }`}
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            MAPA DE CALOR
+          </button>
+        )}
       </div>
 
       {/* Barra de Navegación */}
@@ -444,7 +470,7 @@ export default function BloombergTerminal() {
       )}
 
       {/* Contenido Principal */}
-      {data?.data && (
+      {data?.data && viewType === "tabla" && (
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
             {renderTableHeader(isDarkMode)}
@@ -475,9 +501,9 @@ export default function BloombergTerminal() {
         </div>
       )}
 
-      {/* Mapa de Calor de CEDEARs */}
-      {data?.data?.cedears && data.data.cedears.length > 0 && (
-        <div className={`mt-4 mx-3 rounded-lg border ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"}`}>
+      {/* Vista Mapa de Calor */}
+      {data?.data?.cedears && data.data.cedears.length > 0 && viewType === "heatmap" && (
+        <div className={`m-3 rounded-lg border ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"}`}>
           {/* Header del Mapa de Calor */}
           <div className={`${isDarkMode ? "bg-[#1d3969] text-white" : "bg-[#e2e8f0] text-[#1d3969]"} px-4 py-3 flex items-center justify-between rounded-t-lg`}>
             <div className="flex items-center gap-2">
