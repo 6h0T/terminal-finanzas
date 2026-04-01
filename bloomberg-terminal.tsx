@@ -183,6 +183,37 @@ export default function BloombergTerminal() {
   const isLoading = selectedMarket === "argentina" ? argLoading : usaLoading
   const currentLastUpdate = selectedMarket === "argentina" ? argData?.lastUpdate : usaData?.lastUpdate
 
+  const allSymbols = selectedMarket === "argentina" 
+    ? [
+        ...(argData?.data.cedears || []),
+        ...(argData?.data.acciones || []),
+        ...(argData?.data.bonos || []),
+        ...(argData?.data.letras || []),
+        ...(argData?.data.obligaciones || []),
+        ...(argData?.data.opciones || []),
+      ].map(item => item.symbol)
+    : [
+        ...(usaData?.data.tech || []),
+        ...(usaData?.data.financial || []),
+        ...(usaData?.data.energy || []),
+        ...(usaData?.data.healthcare || []),
+        ...(usaData?.data.consumer || []),
+        ...(usaData?.data.industrial || []),
+        ...(usaData?.data.realestate || []),
+        ...(usaData?.data.etf || []),
+      ].map(item => item.symbol)
+
+  const symbolsParam = allSymbols.slice(0, 100).join(",")
+  
+  const { data: historicalData } = useSWR<{ data: Record<string, number[]> }>(
+    symbolsParam ? `/api/historico?symbols=${symbolsParam}` : null,
+    fetcher,
+    {
+      refreshInterval: 60000,
+      revalidateOnFocus: false,
+    }
+  )
+
   useEffect(() => {
     document.body.classList.toggle("dark", isDarkMode)
     document.body.classList.toggle("light", !isDarkMode)
@@ -290,28 +321,32 @@ export default function BloombergTerminal() {
     </thead>
   )
 
-  const renderTableRow = (item: MarketItem, isDarkMode: boolean) => (
-    <tr key={item.id} className={`border-b ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"} hover:bg-[#2563eb]/10 transition-colors`}>
-      <td className={`sticky left-0 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f8fafc]"} px-2 py-1.5 ${fixedColumnClass}`}>
-        <div className="flex items-center gap-2">
-          <span className={`${isDarkMode ? "text-[#64748b]" : "text-[#64748b]"} text-xs`}>{item.num}</span>
-          <div className="flex flex-col">
-            <span className="text-[#2563eb] font-medium text-xs">{item.symbol}</span>
+  const renderTableRow = (item: MarketItem, isDarkMode: boolean) => {
+    const symbolHistory = historicalData?.data?.[item.symbol]
+    
+    return (
+      <tr key={item.id} className={`border-b ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"} hover:bg-[#2563eb]/10 transition-colors`}>
+        <td className={`sticky left-0 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f8fafc]"} px-2 py-1.5 ${fixedColumnClass}`}>
+          <div className="flex items-center gap-2">
+            <span className={`${isDarkMode ? "text-[#64748b]" : "text-[#64748b]"} text-xs`}>{item.num}</span>
+            <div className="flex flex-col">
+              <span className="text-[#2563eb] font-medium text-xs">{item.symbol}</span>
+            </div>
           </div>
-        </div>
-      </td>
-      <td className={`px-2 py-1.5 w-[100px] ${isDarkMode ? "bg-[#1d3969]/50" : "bg-[#e2e8f0]"}`}>
-        <div className="flex justify-center">
-          <Sparkline
-            data1={[0.5, 0.6, 0.4, 0.7, 0.5, 0.8, 0.6, 0.7]}
-            data2={[0.7, 0.5, 0.8, 0.6, 0.9, 0.7, 1.0, 0.8]}
-            width={80}
-            height={20}
-            color1={isDarkMode ? "#64748b" : "#94a3b8"}
-            color2={item.pctChange >= 0 ? "#059669" : "#dc2626"}
-          />
-        </div>
-      </td>
+        </td>
+        <td className={`px-2 py-1.5 w-[100px] ${isDarkMode ? "bg-[#1d3969]/50" : "bg-[#e2e8f0]"}`}>
+          <div className="flex justify-center">
+            <Sparkline
+              data1={[0.5, 0.6, 0.4, 0.7, 0.5, 0.8, 0.6, 0.7]}
+              data2={[0.7, 0.5, 0.8, 0.6, 0.9, 0.7, 1.0, 0.8]}
+              historicalData={symbolHistory}
+              width={80}
+              height={20}
+              color1={isDarkMode ? "#64748b" : "#94a3b8"}
+              color2={item.pctChange >= 0 ? "#059669" : "#dc2626"}
+            />
+          </div>
+        </td>
       <td className={`px-2 py-1.5 text-right ${isDarkMode ? "text-white" : "text-[#374151]"} font-medium text-xs`}>
         ${item.value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
@@ -339,7 +374,8 @@ export default function BloombergTerminal() {
         {item.time}
       </td>
     </tr>
-  )
+    )
+  }
 
   const renderSection = (title: string, items: MarketItem[], sectionNum: string, isDarkMode: boolean) => {
     const filteredItems = filterItems(items)
@@ -406,9 +442,8 @@ export default function BloombergTerminal() {
         className={`${isDarkMode ? "bg-[#1d3969] text-white" : "bg-[#e2e8f0] text-[#1d3969]"} px-3 py-2 flex items-center justify-between border-b ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"}`}
       >
         <div className="flex items-center gap-4">
-          <span className="text-[#2563eb] font-semibold text-xs sm:text-sm flex items-center gap-1">
-            {selectedMarket === "argentina" ? <TrendingUp className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
-            {selectedMarket === "argentina" ? "MERCADO ARGENTINO" : "MERCADO USA"}
+          <span className="text-white font-bold text-sm sm:text-base tracking-wide">
+            BloomArg
           </span>
           <span className={`${isDarkMode ? "text-[#94a3b8]" : "text-[#64748b]"} text-xs sm:text-sm`}>Panel de Cotizaciones</span>
         </div>

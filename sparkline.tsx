@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react"
 interface SparklineProps {
   data1?: number[]
   data2?: number[]
+  historicalData?: number[]
   width?: number
   height?: number
   color1?: string
@@ -14,12 +15,15 @@ interface SparklineProps {
 export function Sparkline({
   data1 = [0, 1, 0.5, 0.7, 0.9, 0.8, 1, 0.5],
   data2 = [0.5, 0.6, 0.4, 0.7, 0.5, 0.8, 0.6, 0.7],
+  historicalData,
   width = 80,
   height = 20,
   color1 = "#666666",
   color2 = "#4CAF50",
 }: SparklineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  
+  const useHistorical = historicalData && historicalData.length >= 8
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -71,12 +75,17 @@ export function Sparkline({
     // Clear canvas
     ctx.clearRect(0, 0, width, height)
 
-    // Draw first sparkline (gray)
-    drawSparkline(data1, 0, width / 2, color1)
+    if (useHistorical && historicalData) {
+      // Draw single sparkline with historical data
+      drawSparkline(historicalData, 0, width, color2)
+    } else {
+      // Draw first sparkline (gray)
+      drawSparkline(data1, 0, width / 2, color1)
 
-    // Draw second sparkline (colored)
-    drawSparkline(data2, width / 2, width, color2)
-  }, [data1, data2, width, height, color1, color2])
+      // Draw second sparkline (colored)
+      drawSparkline(data2, width / 2, width, color2)
+    }
+  }, [data1, data2, historicalData, useHistorical, width, height, color1, color2])
 
   return <canvas ref={canvasRef} width={width} height={height} className="inline-block" />
 }

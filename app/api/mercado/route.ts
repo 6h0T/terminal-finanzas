@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { saveSnapshot } from "@/lib/db"
 
 // Endpoints de la API data912.com
 const API_ENDPOINTS = {
@@ -108,6 +109,33 @@ export async function GET(request: Request) {
       obligaciones: transformMarketData(obligaciones, "obligaciones"),
       opciones: transformMarketData(opciones, "opciones"),
     }
+
+    // Save snapshots to database (fire-and-forget)
+    const timestamp = Date.now()
+    const date = new Date().toISOString().split("T")[0]
+    
+    setImmediate(() => {
+      const allItems = [
+        ...data.cedears,
+        ...data.acciones,
+        ...data.bonos,
+        ...data.letras,
+        ...data.obligaciones,
+        ...data.opciones,
+      ]
+      
+      for (const item of allItems) {
+        if (item.value > 0) {
+          saveSnapshot({
+            symbol: item.symbol,
+            price: item.value,
+            pct_change: item.pctChange,
+            timestamp,
+            date,
+          })
+        }
+      }
+    })
 
     // Extract dolar values
     const dolar = {
