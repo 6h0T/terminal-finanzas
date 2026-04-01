@@ -23,6 +23,7 @@ import {
   BarChart3,
 } from "lucide-react"
 import { Sparkline } from "./sparkline"
+import { CedearHeatmap } from "./components/cedear-heatmap"
 import useSWR from "swr"
 
 const fixedColumnClass = "w-[120px] sm:w-[140px] whitespace-nowrap overflow-hidden text-ellipsis"
@@ -474,8 +475,29 @@ export default function BloombergTerminal() {
         </div>
       )}
 
+      {/* Mapa de Calor de CEDEARs */}
+      {data?.data?.cedears && data.data.cedears.length > 0 && (
+        <div className={`mt-4 mx-3 rounded-lg border ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"}`}>
+          {/* Header del Mapa de Calor */}
+          <div className={`${isDarkMode ? "bg-[#1d3969] text-white" : "bg-[#e2e8f0] text-[#1d3969]"} px-4 py-3 flex items-center justify-between rounded-t-lg`}>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-[#2563eb]" />
+              <span className="font-semibold">Mapa de Calor - CEDEARs</span>
+              <span className={`text-xs ${isDarkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
+                (Variacion % del dia)
+              </span>
+            </div>
+            <span className={`text-xs ${isDarkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
+              {data.data.cedears.length} activos
+            </span>
+          </div>
+          
+          <CedearHeatmap data={data.data.cedears} isDarkMode={isDarkMode} />
+        </div>
+      )}
+
       {/* Footer con información */}
-      <div className={`px-3 py-2 text-xs ${isDarkMode ? "bg-[#1d3969]/40 text-[#94a3b8]" : "bg-[#f1f5f9] text-[#64748b]"} border-t ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"}`}>
+      <div className={`px-3 py-2 mt-4 text-xs ${isDarkMode ? "bg-[#1d3969]/40 text-[#94a3b8]" : "bg-[#f1f5f9] text-[#64748b]"} border-t ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"}`}>
         <div className="flex flex-wrap justify-between items-center gap-2">
           <span>Fuente: data912.com | Dolar: DolarAPI.com</span>
           <span>Repositorio: github.com/ferminrp/google-sheets-argento</span>
