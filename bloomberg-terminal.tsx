@@ -33,6 +33,7 @@ import {
 } from "lucide-react"
 import { Sparkline } from "./sparkline"
 import { CedearHeatmap } from "./components/cedear-heatmap"
+import { MessageBoard } from "./components/message-board"
 import useSWR from "swr"
 
 const fixedColumnClass = "w-[120px] sm:w-[140px] whitespace-nowrap overflow-hidden text-ellipsis"
@@ -158,6 +159,7 @@ export default function BloombergTerminal() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [refreshCount, setRefreshCount] = useState(0)
   const [lastRefreshReset, setLastRefreshReset] = useState(Date.now())
+  const [showMessages, setShowMessages] = useState(false)
   
   const { data: argData, error: argError, isLoading: argLoading, mutate: argMutate } = useSWR<ArgApiResponse>(
     selectedMarket === "argentina" ? `/api/mercado?category=${selectedCategory === "all" ? "all" : selectedCategory}` : null,
@@ -661,7 +663,7 @@ export default function BloombergTerminal() {
                 : "bg-white border border-[#e2e8f0] text-[#374151] placeholder-[#94a3b8]"
             } focus:outline-none focus:ring-2 focus:ring-[#2563eb]/50`}
           />
-          <button className="flex items-center gap-1 hover:text-[#2563eb] transition-colors">
+          <button onClick={() => setShowMessages(true)} className="flex items-center gap-1 hover:text-[#2563eb] transition-colors">
             <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Mensaje</span>
           </button>
@@ -844,6 +846,13 @@ export default function BloombergTerminal() {
           <span>Actualizacion automatica cada 30 segundos</span>
         </div>
       </div>
+
+      {/* Message Board */}
+      <MessageBoard
+        isOpen={showMessages}
+        onClose={() => setShowMessages(false)}
+        isDarkMode={isDarkMode}
+      />
     </div>
   )
 }
