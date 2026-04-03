@@ -8,6 +8,19 @@
   }
 }
 
+@keyframes glow-green {
+  0%, 100% {
+    box-shadow: 0 0 4px #22c55e, 0 0 8px #22c55e80, 0 0 16px #22c55e40;
+  }
+  50% {
+    box-shadow: 0 0 8px #22c55e, 0 0 16px #22c55eaa, 0 0 24px #22c55e60;
+  }
+}
+
+.animate-glow-green {
+  animation: glow-green 2s ease-in-out infinite;
+}
+
 @layer base {
   :root {
     --font-sans: var(--font-geist-sans);

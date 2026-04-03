@@ -31,10 +31,10 @@ import {
   Home,
   Layers,
 } from "lucide-react"
-import { Sparkline } from "./sparkline"
 import { CedearHeatmap } from "./components/cedear-heatmap"
 import { MessageBoard } from "./components/message-board"
 import { SymbolDetail } from "./components/symbol-detail"
+import { MiniChart } from "./components/mini-chart"
 import useSWR from "swr"
 
 const fixedColumnClass = "w-[120px] sm:w-[140px] whitespace-nowrap overflow-hidden text-ellipsis"
@@ -187,36 +187,6 @@ export default function BloombergTerminal() {
   const isLoading = selectedMarket === "argentina" ? argLoading : usaLoading
   const currentLastUpdate = selectedMarket === "argentina" ? argData?.lastUpdate : usaData?.lastUpdate
 
-  const allSymbols = selectedMarket === "argentina" 
-    ? [
-        ...(argData?.data.cedears || []),
-        ...(argData?.data.acciones || []),
-        ...(argData?.data.bonos || []),
-        ...(argData?.data.letras || []),
-        ...(argData?.data.obligaciones || []),
-        ...(argData?.data.opciones || []),
-      ].map(item => item.symbol)
-    : [
-        ...(usaData?.data.tech || []),
-        ...(usaData?.data.financial || []),
-        ...(usaData?.data.energy || []),
-        ...(usaData?.data.healthcare || []),
-        ...(usaData?.data.consumer || []),
-        ...(usaData?.data.industrial || []),
-        ...(usaData?.data.realestate || []),
-        ...(usaData?.data.etf || []),
-      ].map(item => item.symbol)
-
-  const symbolsParam = allSymbols.slice(0, 100).join(",")
-  
-  const { data: historicalData } = useSWR<{ data: Record<string, number[]> }>(
-    symbolsParam ? `/api/historico?symbols=${symbolsParam}` : null,
-    fetcher,
-    {
-      refreshInterval: 60000,
-      revalidateOnFocus: false,
-    }
-  )
 
   useEffect(() => {
     document.body.classList.toggle("dark", isDarkMode)
@@ -326,8 +296,6 @@ export default function BloombergTerminal() {
   )
 
   const renderTableRow = (item: MarketItem, isDarkMode: boolean) => {
-    const symbolHistory = historicalData?.data?.[item.symbol]
-    
     return (
       <tr key={item.id} onClick={() => setSelectedSymbol(item)} className={`border-b ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"} hover:bg-[#2563eb]/10 transition-colors cursor-pointer`}>
         <td className={`sticky left-0 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f8fafc]"} px-2 py-1.5 ${fixedColumnClass}`}>
@@ -340,14 +308,14 @@ export default function BloombergTerminal() {
         </td>
         <td className={`px-2 py-1.5 w-[100px] ${isDarkMode ? "bg-[#1d3969]/50" : "bg-[#e2e8f0]"}`}>
           <div className="flex justify-center">
-            <Sparkline
-              data1={[0.5, 0.6, 0.4, 0.7, 0.5, 0.8, 0.6, 0.7]}
-              data2={[0.7, 0.5, 0.8, 0.6, 0.9, 0.7, 1.0, 0.8]}
-              historicalData={symbolHistory}
-              width={80}
-              height={20}
-              color1={isDarkMode ? "#64748b" : "#94a3b8"}
-              color2={item.pctChange >= 0 ? "#059669" : "#dc2626"}
+            <MiniChart
+              symbol={item.symbol}
+              market={selectedMarket}
+              price={item.value}
+              pctChange={item.pctChange}
+              width={90}
+              height={24}
+              isDarkMode={isDarkMode}
             />
           </div>
         </td>
@@ -665,9 +633,9 @@ export default function BloombergTerminal() {
                 : "bg-white border border-[#e2e8f0] text-[#374151] placeholder-[#94a3b8]"
             } focus:outline-none focus:ring-2 focus:ring-[#2563eb]/50`}
           />
-          <button onClick={() => setShowMessages(true)} className="flex items-center gap-1 hover:text-[#2563eb] transition-colors">
-            <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Mensaje</span>
+          <button onClick={() => setShowMessages(true)} className="flex items-center gap-1.5 text-[#22c55e] hover:text-[#4ade80] transition-colors animate-glow-green rounded-md px-2 py-1">
+            <MessageSquare className="h-3.5 w-3.5 sm:h-[18px] sm:w-[18px]" />
+            <span className="hidden sm:inline text-[0.9rem] font-semibold">Mensaje</span>
           </button>
           <button className="hover:text-[#2563eb] transition-colors">
             <Star className="h-3 w-3 sm:h-4 sm:w-4" />
