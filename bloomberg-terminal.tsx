@@ -34,6 +34,7 @@ import {
 import { Sparkline } from "./sparkline"
 import { CedearHeatmap } from "./components/cedear-heatmap"
 import { MessageBoard } from "./components/message-board"
+import { SymbolDetail } from "./components/symbol-detail"
 import useSWR from "swr"
 
 const fixedColumnClass = "w-[120px] sm:w-[140px] whitespace-nowrap overflow-hidden text-ellipsis"
@@ -160,6 +161,7 @@ export default function BloombergTerminal() {
   const [refreshCount, setRefreshCount] = useState(0)
   const [lastRefreshReset, setLastRefreshReset] = useState(Date.now())
   const [showMessages, setShowMessages] = useState(false)
+  const [selectedSymbol, setSelectedSymbol] = useState<MarketItem | null>(null)
   
   const { data: argData, error: argError, isLoading: argLoading, mutate: argMutate } = useSWR<ArgApiResponse>(
     selectedMarket === "argentina" ? `/api/mercado?category=${selectedCategory === "all" ? "all" : selectedCategory}` : null,
@@ -327,7 +329,7 @@ export default function BloombergTerminal() {
     const symbolHistory = historicalData?.data?.[item.symbol]
     
     return (
-      <tr key={item.id} className={`border-b ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"} hover:bg-[#2563eb]/10 transition-colors`}>
+      <tr key={item.id} onClick={() => setSelectedSymbol(item)} className={`border-b ${isDarkMode ? "border-[#2563eb]/30" : "border-[#e2e8f0]"} hover:bg-[#2563eb]/10 transition-colors cursor-pointer`}>
         <td className={`sticky left-0 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f8fafc]"} px-2 py-1.5 ${fixedColumnClass}`}>
           <div className="flex items-center gap-2">
             <span className={`${isDarkMode ? "text-[#64748b]" : "text-[#64748b]"} text-xs`}>{item.num}</span>
@@ -846,6 +848,18 @@ export default function BloombergTerminal() {
           <span>Actualizacion automatica cada 30 segundos</span>
         </div>
       </div>
+
+      {/* Symbol Detail Overlay */}
+      {selectedSymbol && (
+        <div className="fixed inset-0 z-40">
+          <SymbolDetail
+            item={selectedSymbol}
+            market={selectedMarket}
+            isDarkMode={isDarkMode}
+            onBack={() => setSelectedSymbol(null)}
+          />
+        </div>
+      )}
 
       {/* Message Board */}
       <MessageBoard

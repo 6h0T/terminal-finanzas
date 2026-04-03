@@ -20,6 +20,8 @@ Panel de cotizaciones en tiempo real estilo Bloomberg Terminal para los mercados
 - ⚡ **Auto-refresh**: Actualización automática cada 30 segundos
 - 🖥️ **Fullscreen**: Modo pantalla completa
 - 📈 **Sparklines**: Gráficos históricos en miniatura
+- 💬 **Chat Anónimo**: Sistema de mensajería estilo 4chan con IDs únicos por IP
+- 📉 **Vista de Detalle**: Gráfico de velas TradingView + panel de órdenes al clickear un símbolo
 
 ## 🚀 Inicio Rápido
 
@@ -62,8 +64,12 @@ terminal-finanzas/
 │   ├── page.tsx                  # Página principal
 │   └── globals.css               # Estilos globales
 ├── components/
-│   └── cedear-heatmap.tsx        # Componente mapa de calor
+│   ├── cedear-heatmap.tsx        # Componente mapa de calor
+│   ├── message-board.tsx         # Panel de mensajería anónima
+│   └── symbol-detail.tsx         # Vista detalle con TradingView
 ├── lib/
+│   ├── supabase.ts               # Cliente Supabase
+│   ├── anon.ts                   # Generación de IDs anónimos
 │   ├── usa-stocks-categories.ts  # Categorización acciones USA
 │   └── utils.ts                  # Utilidades
 ├── bloomberg-terminal.tsx        # Componente principal
@@ -163,6 +169,36 @@ terminal-finanzas/
 }
 ```
 
+### 4. Mensajes (Chat Anónimo)
+**Endpoint**: `/api/messages`
+
+**GET** — Devuelve los últimos 100 mensajes ordenados por fecha.
+
+**Respuesta**:
+```json
+{
+  "messages": [
+    {
+      "id": 1,
+      "anon_id": "Anon#7a3f2b",
+      "content": "GGAL al cielo",
+      "created_at": "2026-04-02T21:15:00.000Z"
+    }
+  ]
+}
+```
+
+**POST** — Envía un nuevo mensaje. La IP se hashea con SHA-256 para asignar un `anon_id` único.
+
+**Body**:
+```json
+{
+  "content": "Texto del mensaje (max 500 chars)"
+}
+```
+
+**Rate limit**: 1 mensaje cada 5 segundos por IP.
+
 ## 🛠️ Stack Tecnológico
 
 ### Frontend
@@ -175,6 +211,12 @@ terminal-finanzas/
 ### Data Fetching & State
 - **[SWR](https://swr.vercel.app/)** - React Hooks para data fetching
 - **React Hooks** - useState, useEffect, useCallback
+
+### Charts
+- **[TradingView Widget](https://www.tradingview.com/widget/)** - Gráficos de velas embebidos con indicadores
+
+### Backend & Database
+- **[Supabase](https://supabase.com/)** - Base de datos PostgreSQL para el sistema de mensajería
 
 ### APIs & Data Sources
 - **[data912.com](https://data912.com/)** - Cotizaciones mercado argentino y USA
@@ -211,6 +253,37 @@ Dropdown en la barra de navegación que permite cambiar entre:
 - Colores: Verde (positivo) → Rojo (negativo)
 - Solo disponible para mercado argentino
 
+### 💬 Chat Anónimo (Terminal Chat)
+Sistema de mensajería en tiempo real estilo 4chan, accesible desde el botón **Mensaje** en el header.
+
+- **IDs anónimos**: Cada IP se hashea con SHA-256 y se le asigna un ID único tipo `Anon#7a3f2b`
+- **Colores por usuario**: Cada anon_id tiene un color asignado determinísticamente
+- **Persistencia**: Mensajes almacenados en Supabase (PostgreSQL)
+- **Auto-refresh**: Actualización cada 10 segundos vía SWR
+- **Rate limiting**: Máximo 1 mensaje cada 5 segundos por IP
+- **Límite de caracteres**: 500 caracteres por mensaje
+- **Panel lateral**: Se abre como sidebar a la derecha con overlay
+
+### 📉 Vista de Detalle por Símbolo
+Al clickear cualquier fila de la tabla se abre una vista fullscreen con información detallada del activo.
+
+- **Gráfico de Velas**: Widget de TradingView embebido con:
+  - Candlestick chart con historial completo
+  - Bollinger Bands, MACD, RSI preconfigurados
+  - Controles de timeframe (1m, 30m, 1h, D)
+  - Volumen integrado
+  - Zoom y pan interactivos
+- **Panel lateral** con:
+  - Cotización actual (precio, variación, hora)
+  - Volumen y operaciones
+  - Libro de órdenes (bid/ask con cantidades)
+  - Barra de presión bid/ask
+- **3 Tabs**:
+  - **Gráfico**: TradingView Widget + panel de datos
+  - **Órdenes**: Libro de órdenes expandido con spread y presión de mercado
+  - **Info**: Datos generales del símbolo + link a TradingView
+- **Mapeo de exchanges**: Argentina usa `BCBA:`, USA usa `NASDAQ:`
+
 ## 📊 Cómo Funciona
 
 1. **Carga Inicial**: Al abrir la app, se carga el mercado argentino con la categoría CEDEARs por defecto
@@ -219,6 +292,8 @@ Dropdown en la barra de navegación que permite cambiar entre:
 4. **Categorización USA**: Las acciones USA se clasifican usando listas curadas de símbolos por sector
 5. **Sparklines**: Se cargan datos históricos de los primeros 100 símbolos visibles
 6. **Fullscreen**: Usa la Fullscreen API del navegador para modo inmersivo
+7. **Click en símbolo**: Abre vista de detalle fullscreen con TradingView Widget + panel de órdenes
+8. **Chat**: Los mensajes se envían a Supabase, la IP se hashea y se asigna un anon_id único y persistente
 
 ## 📝 Créditos
 
